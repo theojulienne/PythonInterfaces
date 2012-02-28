@@ -3,7 +3,9 @@ __all__ = [ 'interface', 'implements' ]
 import inspect
 
 class interface(object):
-	pass
+	@classmethod
+	def isImplementedBy( cls, obj ):
+		return cls in getattr(obj, '__interfaces__', [])
 
 class MissingInterfaceMethodException(Exception):
 	def __init__( self, newClass, functionName, interfaceClass ):
@@ -29,63 +31,40 @@ def getMethodSignature( method ):
 	
 	return callSpec
 
-def implements( interfaceClass ):
-	assert issubclass( interfaceClass, interface )
-	
-	interfaceFunctions = [name for name in dir(interfaceClass) if not name.startswith( '_' )]
-	
+def implements( *interfaceClasses ):
 	def implementsDecorator( newClass ):
-		# save this interface in the class's interface list
-		if not hasattr( newClass, '__interfaces__' ):
-			newClass.__interfaces__ = []
-		newClass.__interfaces__.append( interfaceClass )
-		
-		classMethods = dir(newClass)
-		for functionName in interfaceFunctions:
-			if not functionName in classMethods:
-				raise MissingInterfaceMethodException( newClass, functionName, interfaceClass )
-			else:
-				interfaceFunc = getattr( interfaceClass, functionName )
-				implementFunc = getattr( newClass, functionName )
-				
-				interfaceSig = getMethodSignature( interfaceFunc )
-				implementSig = getMethodSignature( implementFunc )
-				
-				# make sure the signatures match (including names)
-				if interfaceSig != implementSig:
-					raise IncompatibleMethodException( \
-						interfaceClass, interfaceSig, \
-						newClass, implementSig )
-				
-				# copy over the docstring unless it already has one
-				if implementFunc.__func__.__doc__ is None:
-					implementFunc.__func__.__doc__ = interfaceFunc.__func__.__doc__
+		for interfaceClass in interfaceClasses:
+			assert issubclass( interfaceClass, interface )
+
+			interfaceFunctions = [name for name in dir(interfaceClass) if not name.startswith( '_' )]
 			
-					
+			# save this interface in the class's interface list
+			if not hasattr( newClass, '__interfaces__' ):
+				newClass.__interfaces__ = []
+			newClass.__interfaces__.append( interfaceClass )
+		
+			classMethods = dir(newClass)
+			for functionName in interfaceFunctions:
+				interfaceFunc = getattr( interfaceClass, functionName )
+				if interfaceFunc.__module__ != interface.__module__:
+					if not functionName in classMethods:
+						raise MissingInterfaceMethodException( newClass, functionName, interfaceClass )
+					else:
+						implementFunc = getattr( newClass, functionName )
+				
+						interfaceSig = getMethodSignature( interfaceFunc )
+						implementSig = getMethodSignature( implementFunc )
+				
+						# make sure the signatures match (including names)
+						if interfaceSig != implementSig:
+							raise IncompatibleMethodException( \
+								interfaceClass, interfaceSig, \
+								newClass, implementSig )
+				
+						# copy over the docstring unless it already has one
+						if implementFunc.__func__.__doc__ is None:
+							implementFunc.__func__.__doc__ = interfaceFunc.__func__.__doc__
+
 		return newClass
 	return implementsDecorator
 
-
-if __name__ == '__main__':
-	class IBar(interface):
-		def bar( self, a, b, c ):
-			"""blah blah blah"""
-
-	class IBaz(interface):
-		def baz( self, b, z ):
-			"""Baz from IBaz"""
-
-	@implements(IBar)
-	@implements(IBaz)
-	class Foo(object):
-		def bar( self, a, b, c ):
-			pass
-			
-		def baz( self, b, z ):
-			pass
-	
-	print Foo.__interfaces__
-	print Foo.bar.__doc__
-	print Foo.baz.__doc__
-
-	#f = Foo( )
