@@ -63,11 +63,11 @@ def implements( *interfaceClasses ):
 				
 						# copy over the docstring unless it already has one
 						if hasattr(implementFunc, '__func__'):
-							# Python 2 (decorator got bound method)
+							# Python 2
 							if implementFunc.__func__.__doc__ is None:
 								implementFunc.__func__.__doc__ = interfaceFunc.__doc__
 						else:
-							# Python 3 (decorator got bound function)
+							# Python 3
 							if implementFunc.__doc__ is None:
 								implementFunc.__doc__ = interfaceFunc.__doc__
 						
