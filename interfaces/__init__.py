@@ -62,9 +62,15 @@ def implements( *interfaceClasses ):
 								newClass, implementSig )
 				
 						# copy over the docstring unless it already has one
-						if implementFunc.__func__.__doc__ is None:
-							implementFunc.__func__.__doc__ = interfaceFunc.__func__.__doc__
-
+						if hasattr(implementFunc, '__func__'):
+							# Python 2 (decorator got bound method)
+							if implementFunc.__func__.__doc__ is None:
+								implementFunc.__func__.__doc__ = interfaceFunc.__doc__
+						else:
+							# Python 3 (decorator got bound function)
+							if implementFunc.__doc__ is None:
+								implementFunc.__doc__ = interfaceFunc.__doc__
+						
 		return newClass
 	return implementsDecorator
 
